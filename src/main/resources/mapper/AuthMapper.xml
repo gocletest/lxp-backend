@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gocle.lxp.mapper.AuthMapper">
+
+    <select id="findByUserId" resultType="com.gocle.lxp.domain.User">
+        SELECT user_id AS userId,
+               password,
+               name,
+               role
+        FROM users
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>
