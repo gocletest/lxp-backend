@@ -34,9 +34,15 @@ public class SecurityConfig {
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/auth/login", "/error").permitAll()
-                    .anyRequest().authenticated()
-            )
+        	    // 인증 없이 허용
+        	    .requestMatchers("/api/auth/login", "/error").permitAll()
+
+        	    // 분석 API (관리자/내부)
+        	    .requestMatchers("/api/analytics/**").authenticated()
+
+        	    // 그 외
+        	    .anyRequest().authenticated()
+        	)
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
