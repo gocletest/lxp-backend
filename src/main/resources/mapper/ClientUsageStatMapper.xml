@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gocle.lxp.mapper.ClientUsageStatMapper">
+
+    <!-- Client 전체 통계 -->
+    <select id="countByClient"
+            resultType="com.gocle.lxp.dto.apikey.ClientUsageStatResponse">
+    <![CDATA[
+        SELECT
+            c.client_id AS clientId,
+            c.client_code AS clientCode,
+            c.client_name AS clientName,
+            COUNT(DISTINCT k.api_key_id) AS apiKeyCount,
+            COUNT(u.usage_id) AS totalCount
+        FROM lxp_api_client c
+        JOIN lxp_api_key k ON c.client_id = k.client_id
+        LEFT JOIN lxp_api_key_usage u
+          ON k.api_key_id = u.api_key_id
+         AND u.used_at BETWEEN #{from} AND #{to}
+        GROUP BY c.client_id, c.client_code, c.client_name
+        ORDER BY totalCount DESC
+    ]]>
+    </select>
+
+    <!-- Client + 일자별 -->
+    <select id="countDailyByClient"
+            resultType="com.gocle.lxp.dto.apikey.ClientUsageDailyResponse">
+    <![CDATA[
+        SELECT
+            c.client_id AS clientId,
+            c.client_code AS clientCode,
+            c.client_name AS clientName,
+            DATE(u.used_at) AS date,
+            COUNT(u.usage_id) AS count
+        FROM lxp_api_client c
+        JOIN lxp_api_key k ON c.client_id = k.client_id
+        LEFT JOIN lxp_api_key_usage u
+          ON k.api_key_id = u.api_key_id
+         AND u.used_at BETWEEN #{from} AND #{to}
+        GROUP BY c.client_id, c.client_code, c.client_name, DATE(u.used_at)
+        ORDER BY date
+    ]]>
+    </select>
+
+    <!-- Client + Endpoint별 -->
+    <select id="countByEndpoint"
+            resultType="com.gocle.lxp.dto.apikey.ClientUsageByEndpointResponse">
+    <![CDATA[
+        SELECT
+            c.client_id AS clientId,
+            u.endpoint,
+            COUNT(*) AS count
+        FROM lxp_api_client c
+        JOIN lxp_api_key k ON c.client_id = k.client_id
+        JOIN lxp_api_key_usage u ON k.api_key_id = u.api_key_id
+        WHERE c.client_id = #{clientId}
+          AND u.used_at BETWEEN #{from} AND #{to}
+        GROUP BY c.client_id, u.endpoint
+        ORDER BY count DESC
+    ]]>
+    </select>
+
+    <!-- Client + API Key별 -->
+    <select id="countByApiKey"
+            resultType="com.gocle.lxp.dto.apikey.ClientUsageByApiKeyResponse">
+    <![CDATA[
+        SELECT
+            k.api_key_id AS apiKeyId,
+            k.api_key AS apiKey,
+            COUNT(u.usage_id) AS count
+        FROM lxp_api_key k
+        LEFT JOIN lxp_api_key_usage u
+          ON k.api_key_id = u.api_key_id
+         AND u.used_at BETWEEN #{from} AND #{to}
+        WHERE k.client_id = #{clientId}
+        GROUP BY k.api_key_id, k.api_key
+        ORDER BY count DESC
+    ]]>
+    </select>
+    
+	<!-- Client의 API Key 목록 + 사용량 -->
+	<select id="selectClientApiKeysWithUsage"
+	        resultType="com.gocle.lxp.dto.apikey.ClientUsageByApiKeyResponse">
+	<![CDATA[
+	    SELECT
+	        k.api_key_id AS apiKeyId,
+	        CONCAT(LEFT(k.api_key, 6), '****') AS apiKey,
+	        COUNT(u.usage_id) AS count
+	    FROM lxp_api_key k
+	    LEFT JOIN lxp_api_key_usage u
+	      ON k.api_key_id = u.api_key_id
+	     AND u.used_at BETWEEN #{from} AND #{to}
+	    WHERE k.client_id = #{clientId}
+	    GROUP BY k.api_key_id, k.api_key
+	    ORDER BY k.api_key_id
+	]]>
+	</select>
+	
+	<!-- Client 이상 트래픽 감지 -->
+	<select id="detectClientAnomaly"
+	        resultType="com.gocle.lxp.dto.apikey.ClientTrafficAnomalyResponse">
+	<![CDATA[
+	    SELECT
+	        c.client_id AS clientId,
+	        c.client_code AS clientCode,
+	        c.client_name AS clientName,
+	        COUNT(u.usage_id) AS totalCount,
+	        AVG(cnt.daily_count) AS averageCount,
+	        (COUNT(u.usage_id) / AVG(cnt.daily_count)) AS ratio
+	    FROM lxp_api_client c
+	    JOIN lxp_api_key k ON c.client_id = k.client_id
+	    JOIN lxp_api_key_usage u ON k.api_key_id = u.api_key_id
+	    JOIN (
+	        SELECT
+	            k2.client_id,
+	            DATE(u2.used_at) AS dt,
+	            COUNT(*) AS daily_count
+	        FROM lxp_api_key k2
+	        JOIN lxp_api_key_usage u2 ON k2.api_key_id = u2.api_key_id
+	        WHERE u2.used_at BETWEEN #{from} AND #{to}
+	        GROUP BY k2.client_id, DATE(u2.used_at)
+	    ) cnt ON cnt.client_id = c.client_id
+	    WHERE u.used_at BETWEEN #{from} AND #{to}
+	    GROUP BY c.client_id, c.client_code, c.client_name
+	    HAVING ratio >= #{threshold}
+	    ORDER BY ratio DESC
+	]]>
+	</select>
+
+
+</mapper>
