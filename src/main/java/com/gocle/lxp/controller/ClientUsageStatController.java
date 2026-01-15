@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @RestController
@@ -26,8 +27,8 @@ public class ClientUsageStatController {
      */
     @GetMapping("/stats")
     public ApiResponse<List<ClientUsageStatResponse>> stats(
-            @RequestParam LocalDateTime from,
-            @RequestParam LocalDateTime to
+            @RequestParam(name = "from") OffsetDateTime from,
+            @RequestParam(name = "to") OffsetDateTime to
     ) {
         return ApiResponse.success(
             "Client usage stats",
@@ -41,8 +42,8 @@ public class ClientUsageStatController {
      */
     @GetMapping("/stats/daily")
     public ApiResponse<List<ClientUsageDailyResponse>> daily(
-            @RequestParam LocalDateTime from,
-            @RequestParam LocalDateTime to
+            @RequestParam(name = "from") OffsetDateTime from,
+            @RequestParam(name = "to") OffsetDateTime to
     ) {
         return ApiResponse.success(
             "Client daily usage stats",
@@ -56,9 +57,9 @@ public class ClientUsageStatController {
      */
     @GetMapping("/{clientId}/stats/endpoints")
     public ApiResponse<List<ClientUsageByEndpointResponse>> byEndpoint(
-            @PathVariable Long clientId,
-            @RequestParam LocalDateTime from,
-            @RequestParam LocalDateTime to
+            @PathVariable("clientId") Long clientId,
+            @RequestParam(name = "from") OffsetDateTime from,
+            @RequestParam(name = "to") OffsetDateTime to
     ) {
         return ApiResponse.success(
             "Client usage by endpoint",
@@ -72,9 +73,9 @@ public class ClientUsageStatController {
      */
     @GetMapping("/{clientId}/stats/apikeys")
     public ApiResponse<List<ClientUsageByApiKeyResponse>> byApiKey(
-            @PathVariable Long clientId,
-            @RequestParam LocalDateTime from,
-            @RequestParam LocalDateTime to
+            @PathVariable("clientId") Long clientId,
+            @RequestParam(name = "from") OffsetDateTime from,
+            @RequestParam(name = "to") OffsetDateTime to
     ) {
         return ApiResponse.success(
             "Client usage by api key",
@@ -88,8 +89,8 @@ public class ClientUsageStatController {
      */
     @GetMapping("/stats/anomaly")
     public ApiResponse<List<ClientTrafficAnomalyResponse>> anomaly(
-            @RequestParam LocalDateTime from,
-            @RequestParam LocalDateTime to,
+            @RequestParam OffsetDateTime from,
+            @RequestParam OffsetDateTime to,
             @RequestParam(defaultValue = "3") double threshold
     ) {
         return ApiResponse.success(
