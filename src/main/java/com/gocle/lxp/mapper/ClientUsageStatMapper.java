@@ -45,7 +45,8 @@ public interface ClientUsageStatMapper {
     
     List<ClientTrafficAnomalyResponse> detectClientAnomaly(
 	    @Param("from") LocalDateTime from,
-	    @Param("to") LocalDateTime to
+	    @Param("to") LocalDateTime to,
+	    @Param("threshold") double threshold
 	);
 
 }

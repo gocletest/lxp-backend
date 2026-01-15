@@ -33,7 +33,7 @@ public class ApiKeyAdminService {
             req.getRateLimitPerMin(),
             req.getExpiresAt()
         );
-
+System.out.println("@@@@@@@@@@@@@@@@@@@");
         return apiKey; // ⚠️ 반드시 1회만 반환
     }
 

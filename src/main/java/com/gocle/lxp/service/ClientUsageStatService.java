@@ -51,11 +51,9 @@ public class ClientUsageStatService {
             LocalDateTime to,
             double threshold) {
 
-        return mapper.detectClientAnomaly(from, to)
-                     .stream()
-                     .filter(r -> r.getRatio() >= threshold)
-                     .toList();
+        return mapper.detectClientAnomaly(from, to, threshold);
     }
+
 
 
 }

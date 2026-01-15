@@ -26,6 +26,10 @@ public class ApiClientService {
         mapper.updateClient(clientId, req);
     }
 
+    public void updateCode(Long clientId, ApiClientCreateRequest req) {
+        mapper.updateClientCode(clientId, req);
+    }
+    
     public void changeStatus(Long clientId, String status) {
         mapper.updateClientStatus(clientId, status);
     }

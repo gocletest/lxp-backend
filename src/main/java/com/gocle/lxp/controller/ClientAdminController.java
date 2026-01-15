@@ -32,17 +32,25 @@ public class ClientAdminController {
         return ApiResponse.success("Client created", null);
     }
 
-    @PutMapping("/{clientId}")
+    @PatchMapping("/{clientId}")
     public ApiResponse<Void> update(
-            @PathVariable Long clientId,
+            @PathVariable("clientId") Long clientId,
             @RequestBody ApiClientCreateRequest req) {
         service.update(clientId, req);
+        return ApiResponse.success("Client updated", null);
+    }
+    
+    @PatchMapping("/{clientId}/code")
+    public ApiResponse<Void> updateCode(
+            @PathVariable("clientId") Long clientId,
+            @RequestBody ApiClientCreateRequest req) {
+        service.updateCode(clientId, req);
         return ApiResponse.success("Client updated", null);
     }
 
     @PatchMapping("/{clientId}/status")
     public ApiResponse<Void> changeStatus(
-            @PathVariable Long clientId,
+            @PathVariable("clientId") Long clientId,
             @RequestParam String status) {
         service.changeStatus(clientId, status);
         return ApiResponse.success("Client status changed", null);

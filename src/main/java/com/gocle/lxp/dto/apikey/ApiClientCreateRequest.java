@@ -7,4 +7,5 @@ import lombok.Setter;
 public class ApiClientCreateRequest {
     private String clientCode;
     private String clientName;
+    private String clientStatus;
 }

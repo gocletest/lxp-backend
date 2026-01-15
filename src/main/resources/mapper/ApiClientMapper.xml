@@ -6,19 +6,29 @@
 <mapper namespace="com.gocle.lxp.mapper.ApiClientMapper">
 
     <!-- Client 목록 -->
-    <select id="selectClientList"
-            resultType="com.gocle.lxp.dto.apikey.ApiClientResponse">
-    <![CDATA[
-        SELECT
-            client_id   AS clientId,
-            client_code AS clientCode,
-            client_name AS clientName,
-            status,
-            created_at  AS createdAt
-        FROM lxp_api_client
-        ORDER BY client_id DESC
-    ]]>
-    </select>
+    <select id="selectClientList" resultType="com.gocle.lxp.dto.apikey.ApiClientResponse">
+	<![CDATA[
+	    SELECT
+	        c.client_id   AS clientId,
+	        c.client_code AS clientCode,
+	        c.client_name AS clientName,
+	        c.status as clientStatus,
+	        c.created_at  AS createdAt,
+	        COUNT(k.api_key_id) AS apiKeyCount,
+	        SUM(CASE WHEN k.enabled = 1 THEN 1 ELSE 0 END) AS activeApiKeyCount,
+	        SUM(CASE WHEN k.enabled = 0 THEN 1 ELSE 0 END) AS disabledApiKeyCount
+	    FROM lxp_api_client c
+	    LEFT OUTER JOIN lxp_api_key k
+	        ON c.client_id = k.client_id
+	    GROUP BY
+	        c.client_id,
+	        c.client_code,
+	        c.client_name,
+	        c.status,
+	        c.created_at
+	    ORDER BY c.client_id DESC
+	]]>
+	</select>
 
     <!-- Client 등록 -->
     <insert id="insertClient">
@@ -42,9 +52,18 @@
     <![CDATA[
         UPDATE lxp_api_client
         SET
-            client_code = #{req.clientCode},
-            client_name = #{req.clientName}
+            client_name = #{req.clientName},
+            status = #{req.clientStatus}
         WHERE client_id = #{clientId}
+    ]]>
+    </update>
+    
+     <!-- Client Code 수정 -->
+    <update id="updateClientCode">
+    <![CDATA[
+        UPDATE lxp_api_client
+	    	SET client_code = #{clientCode}
+	    WHERE client_id = #{clientId}
     ]]>
     </update>
 
@@ -63,7 +82,7 @@
 	        client_id   AS clientId,
 	        client_code AS clientCode,
 	        client_name AS clientName,
-	        status,
+	        status AS clientStatus,
 	        created_at  AS createdAt
 	    FROM lxp_api_client
 	    WHERE client_id = #{clientId}

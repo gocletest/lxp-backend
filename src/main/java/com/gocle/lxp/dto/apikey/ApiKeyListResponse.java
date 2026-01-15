@@ -16,7 +16,7 @@ public class ApiKeyListResponse {
     private String clientCode;
     private String clientName;
 
-    private Boolean enabled;
+    private Integer enabled;
     private Integer rateLimitPerMin;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;

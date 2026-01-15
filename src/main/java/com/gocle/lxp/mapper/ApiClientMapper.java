@@ -21,7 +21,11 @@ public interface ApiClientMapper {
         @Param("clientId") Long clientId,
         @Param("req") ApiClientCreateRequest req
     );
-
+    /** Client 코드 수정 */
+    int updateClientCode(
+            @Param("clientId") Long clientId,
+            @Param("req") ApiClientCreateRequest req
+    );
     /** Client 상태 변경 (ACTIVE / INACTIVE) */
     int updateClientStatus(
         @Param("clientId") Long clientId,

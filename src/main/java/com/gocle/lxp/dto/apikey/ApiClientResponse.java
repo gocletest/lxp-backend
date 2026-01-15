@@ -19,8 +19,13 @@ public class ApiClientResponse {
     private String clientName;
 
     /** 상태 (ACTIVE / INACTIVE) */
-    private String status;
+    private String clientStatus;
 
     /** 생성일 */
     private LocalDateTime createdAt;
+    
+    private Integer apiKeyCount;
+    private Integer activeApiKeyCount;
+    private Integer disabledApiKeyCount;
+    
 }
