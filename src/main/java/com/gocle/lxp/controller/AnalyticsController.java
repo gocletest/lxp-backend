@@ -26,7 +26,6 @@ public class AnalyticsController {
     
     @GetMapping("/overview")
     public ApiResponse<?> overview() throws Exception {
-    	System.out.println("================ 도달 ==================");
         return ApiResponse.success(analyticsService.getOverview());
     }
 }

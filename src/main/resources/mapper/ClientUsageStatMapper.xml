@@ -70,6 +70,7 @@
         SELECT
             k.api_key_id AS apiKeyId,
             k.api_key AS apiKey,
+            u.endpoint AS endpoint, 
             COUNT(u.usage_id) AS count
         FROM lxp_api_key k
         LEFT JOIN lxp_api_key_usage u
@@ -129,6 +130,23 @@
 	    ORDER BY ratio DESC
 	]]>
 	</select>
+	
+	<!-- Client + Endpoint + 일자별 -->
+	<select id="countDailyByEndpoint" resultType="com.gocle.lxp.dto.apikey.ClientUsageDailyByEndpointResponse">
+	<![CDATA[
+	    SELECT
+	        DATE(u.used_at) AS date,
+	        u.endpoint AS endpoint,
+	        COUNT(u.usage_id) AS count
+	    FROM lxp_api_key_usage u
+	    JOIN lxp_api_key k ON u.api_key_id = k.api_key_id
+	    WHERE k.client_id = #{clientId}
+	      AND u.used_at BETWEEN #{from} AND #{to}
+	    GROUP BY DATE(u.used_at), u.endpoint
+	    ORDER BY date ASC
+	]]>
+	</select>
+
 
 
 </mapper>

@@ -3,6 +3,7 @@ package com.gocle.lxp.service;
 import com.gocle.lxp.dto.apikey.ClientUsageStatResponse;
 import com.gocle.lxp.dto.apikey.ClientUsageDailyResponse;
 import com.gocle.lxp.dto.apikey.ClientUsageByEndpointResponse;
+import com.gocle.lxp.dto.apikey.ClientUsageDailyByEndpointResponse;
 import com.gocle.lxp.dto.apikey.ClientTrafficAnomalyResponse;
 import com.gocle.lxp.dto.apikey.ClientUsageByApiKeyResponse;
 import com.gocle.lxp.mapper.ClientUsageStatMapper;
@@ -54,7 +55,14 @@ public class ClientUsageStatService {
 
         return mapper.detectClientAnomaly(from, to, threshold);
     }
-
+    
+    
+    public List<ClientUsageDailyByEndpointResponse> getDailyByEndpoint(
+            Long clientId,
+            OffsetDateTime from,
+            OffsetDateTime to) {
+        return mapper.countDailyByEndpoint(clientId, from, to);
+    }
 
 
 }

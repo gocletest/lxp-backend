@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gocle.lxp.mapper.InstitutionUserMapper">
+
+    <!-- 기관 사용자 목록 / 검색 (통합관리자용) -->
+	<select id="selectInstitutionUsers"
+	        resultType="com.gocle.lxp.dto.institution.InstitutionUserDto">
+	
+	<![CDATA[
+	    SELECT
+	        iu.institution_user_id AS institutionUserId,
+	        iu.client_id           AS clientId,
+	        c.client_name          AS clientName,
+	        c.client_code          AS clientCode,
+	        iu.login_id            AS loginId,
+	        iu.user_name           AS userName,
+	        iu.role,
+	        iu.status,
+	        iu.created_at          AS createdAt
+	    FROM institution_user iu
+	    JOIN lxp_api_client c
+	      ON iu.client_id = c.client_id
+	    WHERE 1 = 1
+	]]>
+	
+	    <!-- 기관 ID 검색 -->
+	    <if test="clientId != null">
+	        <![CDATA[ AND iu.client_id = #{clientId} ]]>
+	    </if>
+	
+	    <!-- 기관명 검색 -->
+	    <if test="clientName != null and clientName != ''">
+	        <![CDATA[
+	            AND c.client_name LIKE CONCAT('%', #{clientName}, '%')
+	        ]]>
+	    </if>
+	
+	    <!-- 로그인 ID -->
+	    <if test="loginId != null and loginId != ''">
+	        <![CDATA[
+	            AND iu.login_id LIKE CONCAT('%', #{loginId}, '%')
+	        ]]>
+	    </if>
+	
+	    <!-- 사용자 이름 -->
+	    <if test="userName != null and userName != ''">
+	        <![CDATA[
+	            AND iu.user_name LIKE CONCAT('%', #{userName}, '%')
+	        ]]>
+	    </if>
+	
+	    <!-- 상태 -->
+	    <if test="status != null and status != ''">
+	        <![CDATA[
+	            AND iu.status = #{status}
+	        ]]>
+	    </if>
+	
+	<![CDATA[
+	    ORDER BY c.client_name ASC, iu.created_at DESC
+	]]>
+	
+	</select>
+
+
+    <!-- 단건 -->
+    <select id="selectById"
+            resultType="com.gocle.lxp.dto.institution.InstitutionUserDto">
+    <![CDATA[
+        SELECT
+            institution_user_id AS institutionUserId,
+            client_id           AS clientId,
+            login_id            AS loginId,
+            user_name           AS userName,
+            role,
+            status
+        FROM institution_user
+        WHERE institution_user_id = #{institutionUserId}
+    ]]>
+    </select>
+
+    <!-- 중복 체크 -->
+    <select id="existsByClientIdAndLoginId" resultType="int">
+    <![CDATA[
+        SELECT COUNT(1)
+        FROM institution_user
+        WHERE client_id = #{clientId}
+          AND login_id = #{loginId}
+    ]]>
+    </select>
+
+    <!-- 등록 -->
+    <insert id="insertInstitutionUser">
+    <![CDATA[
+        INSERT INTO institution_user (
+            client_id, login_id, user_name, password, role, status
+        ) VALUES (
+            #{clientId}, #{loginId}, #{userName},
+            #{password}, #{role}, #{status}
+        )
+    ]]>
+    </insert>
+
+    <!-- 수정 -->
+    <update id="updateInstitutionUser">
+    <![CDATA[
+        UPDATE institution_user
+        SET user_name = #{userName},
+            status    = #{status}
+        WHERE institution_user_id = #{institutionUserId}
+    ]]>
+    </update>
+
+    <!-- 상태 변경 -->
+    <update id="updateStatus">
+    <![CDATA[
+        UPDATE institution_user
+        SET status = #{status}
+        WHERE institution_user_id = #{institutionUserId}
+    ]]>
+    </update>
+
+    <!-- 사용자명 수정 -->
+	<update id="updateUserName">
+	<![CDATA[
+	    UPDATE institution_user
+	       SET user_name = #{userName},
+	           updated_at = NOW()
+	     WHERE institution_user_id = #{institutionUserId}
+	]]>
+	</update>
+	
+	<!-- 비밀번호 초기화 -->
+	<update id="updatePassword">
+	<![CDATA[
+	    UPDATE institution_user
+	       SET password = #{password},
+	           updated_at = NOW()
+	     WHERE institution_user_id = #{institutionUserId}
+	]]>
+	</update>
+	
+	<!-- 비밀번호 변경 -->
+	<update id="changePassword">
+	<![CDATA[
+	    UPDATE institution_user
+	       SET password = #{password},
+	           updated_at = NOW()
+	     WHERE institution_user_id = #{institutionUserId}
+	]]>
+	</update>
+
+    <!-- 삭제 -->
+    <delete id="deleteById">
+    <![CDATA[
+        DELETE FROM institution_user
+        WHERE institution_user_id = #{institutionUserId}
+    ]]>
+    </delete>
+
+</mapper>

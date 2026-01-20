@@ -3,6 +3,7 @@ package com.gocle.lxp.mapper;
 import com.gocle.lxp.dto.apikey.ClientUsageStatResponse;
 import com.gocle.lxp.dto.apikey.ClientUsageDailyResponse;
 import com.gocle.lxp.dto.apikey.ClientUsageByEndpointResponse;
+import com.gocle.lxp.dto.apikey.ClientUsageDailyByEndpointResponse;
 import com.gocle.lxp.dto.apikey.ClientTrafficAnomalyResponse;
 import com.gocle.lxp.dto.apikey.ClientUsageByApiKeyResponse;
 import org.apache.ibatis.annotations.Mapper;
@@ -48,6 +49,12 @@ public interface ClientUsageStatMapper {
 	    @Param("from") OffsetDateTime from,
 	    @Param("to") OffsetDateTime to,
 	    @Param("threshold") double threshold
+	);
+    
+    List<ClientUsageDailyByEndpointResponse> countDailyByEndpoint(
+	    @Param("clientId") Long clientId,
+	    @Param("from") OffsetDateTime from,
+	    @Param("to") OffsetDateTime to
 	);
 
 }

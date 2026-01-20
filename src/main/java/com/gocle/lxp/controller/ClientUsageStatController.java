@@ -4,6 +4,7 @@ import com.gocle.lxp.common.ApiResponse;
 import com.gocle.lxp.dto.apikey.ClientUsageStatResponse;
 import com.gocle.lxp.dto.apikey.ClientUsageDailyResponse;
 import com.gocle.lxp.dto.apikey.ClientUsageByEndpointResponse;
+import com.gocle.lxp.dto.apikey.ClientUsageDailyByEndpointResponse;
 import com.gocle.lxp.dto.apikey.ClientTrafficAnomalyResponse;
 import com.gocle.lxp.dto.apikey.ClientUsageByApiKeyResponse;
 import com.gocle.lxp.service.ClientUsageStatService;
@@ -89,13 +90,28 @@ public class ClientUsageStatController {
      */
     @GetMapping("/stats/anomaly")
     public ApiResponse<List<ClientTrafficAnomalyResponse>> anomaly(
-            @RequestParam OffsetDateTime from,
-            @RequestParam OffsetDateTime to,
+            @RequestParam(name = "from") OffsetDateTime from,
+            @RequestParam(name = "to") OffsetDateTime to,
             @RequestParam(defaultValue = "3") double threshold
     ) {
         return ApiResponse.success(
             "Client traffic anomaly",
             service.detectAnomaly(from, to, threshold)
+        );
+    }
+    
+    /**
+     * Client + Endpoint + 일자별 사용량 (LineChart / Drill-down용)
+     */
+    @GetMapping("/{clientId}/stats/daily-by-endpoint")
+    public ApiResponse<List<ClientUsageDailyByEndpointResponse>> dailyByEndpoint(
+            @PathVariable("clientId") Long clientId,
+            @RequestParam(name = "from") OffsetDateTime from,
+            @RequestParam(name = "to") OffsetDateTime to
+    ) {
+        return ApiResponse.success(
+            "Client daily usage by endpoint",
+            service.getDailyByEndpoint(clientId, from, to)
         );
     }
 

@@ -8,5 +8,6 @@ public class ClientUsageByApiKeyResponse {
 
     private Long apiKeyId;
     private String apiKey;
+    private String endpoint;
     private Long count;
 }
