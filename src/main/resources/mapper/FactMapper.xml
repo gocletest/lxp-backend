@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gocle.lxp.mapper.FactMapper">
+
+    <!-- =========================
+         EVENT DAILY
+         ========================= -->
+    <insert id="upsertEventDaily">
+        INSERT INTO lxp_fact_event_daily (
+            stat_date,
+            client_id,
+            event_type,
+            event_count
+        )
+        SELECT
+            DATE(occurred_at),
+            client_id,
+            event_type,
+            COUNT(*)
+        FROM lxp_tracking_event
+        WHERE DATE(occurred_at) = #{statDate}
+          AND client_id = #{clientId}
+        GROUP BY event_type
+        ON DUPLICATE KEY UPDATE
+            event_count = VALUES(event_count)
+    </insert>
+
+    <!-- =========================
+         COURSE DAILY
+         ========================= -->
+    <insert id="upsertCourseDaily">
+        INSERT INTO lxp_fact_course_daily (
+            stat_date,
+            client_id,
+            external_course_id,
+            started_count,
+            completed_count,
+            active_user_count
+        )
+        SELECT
+            DATE(occurred_at),
+            client_id,
+            external_course_id,
+            SUM(event_type = 'STARTED'),
+            SUM(event_type = 'COMPLETED'),
+            COUNT(DISTINCT external_user_id)
+        FROM lxp_tracking_event
+        WHERE DATE(occurred_at) = #{statDate}
+          AND client_id = #{clientId}
+          AND external_course_id IS NOT NULL
+        GROUP BY external_course_id
+        ON DUPLICATE KEY UPDATE
+            started_count = VALUES(started_count),
+            completed_count = VALUES(completed_count),
+            active_user_count = VALUES(active_user_count)
+    </insert>
+
+    <!-- =========================
+         USER SUMMARY
+         ========================= -->
+    <insert id="upsertUserSummary">
+        INSERT INTO lxp_fact_user_summary (
+            client_id,
+            external_user_id,
+            last_event_at,
+            total_event_count,
+            completed_lesson_count
+        )
+        SELECT
+            client_id,
+            external_user_id,
+            MAX(occurred_at),
+            COUNT(*),
+            SUM(event_type = 'COMPLETED')
+        FROM lxp_tracking_event
+        WHERE client_id = #{clientId}
+        GROUP BY external_user_id
+        ON DUPLICATE KEY UPDATE
+            last_event_at = VALUES(last_event_at),
+            total_event_count = VALUES(total_event_count),
+            completed_lesson_count = VALUES(completed_lesson_count)
+    </insert>
+
+    <!-- =========================
+         LESSON PROGRESS
+         ========================= -->
+    <insert id="upsertLessonProgress">
+        INSERT INTO lxp_fact_lesson_progress (
+            client_id,
+            external_user_id,
+            external_course_id,
+            external_lesson_id,
+            progress_rate,
+            last_event_at
+        )
+        SELECT
+            client_id,
+            external_user_id,
+            external_course_id,
+            external_lesson_id,
+            CASE
+                WHEN SUM(event_type = 'COMPLETED') > 0 THEN 100
+                ELSE 0
+            END,
+            MAX(occurred_at)
+        FROM lxp_tracking_event
+        WHERE client_id = #{clientId}
+          AND external_lesson_id IS NOT NULL
+        GROUP BY external_user_id, external_lesson_id
+        ON DUPLICATE KEY UPDATE
+            progress_rate = VALUES(progress_rate),
+            last_event_at = VALUES(last_event_at)
+    </insert>
+
+</mapper>

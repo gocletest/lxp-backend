@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gocle.lxp.mapper.AdminDashboardMapper">
+
+    <!-- =====================================================
+         1. 플랫폼 전체 Overview (통합관리자 KPI)
+         ===================================================== -->
+    <select id="selectPlatformOverview" resultType="map">
+        SELECT
+            /* 전체 기관 수 */
+            (SELECT COUNT(*)
+               FROM lxp_api_client
+            ) AS totalClients,
+
+            /* 활성 기관 수 */
+            (SELECT COUNT(*)
+               FROM lxp_api_client
+              WHERE status = 'ACTIVE'
+            ) AS activeClients,
+
+            /* 전체 사용자 수 */
+            (SELECT COUNT(DISTINCT user_id)
+               FROM lxp_fact_user_summary
+            ) AS totalUsers,
+
+            /* 전체 과정 수 */
+            (SELECT COUNT(*)
+               FROM lxp_course_meta
+            ) AS totalCourses,
+
+            /* 어제 발생한 학습 이벤트 수 */
+            (SELECT IFNULL(SUM(event_count), 0)
+               FROM lxp_fact_event_daily
+              WHERE stat_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+            ) AS yesterdayEvents,
+
+            /* 현재 진행 중 학습자 수 */
+            (SELECT COUNT(*)
+               FROM lxp_fact_user_summary
+              WHERE learning_status = 'IN_PROGRESS'
+            ) AS learningInProgress
+    </select>
+
+    <!-- =====================================================
+         2. 기관별 Health 상태 테이블
+         ===================================================== -->
+    <select id="selectClientHealth" resultType="map">
+        SELECT
+            c.client_id       AS clientId,
+            c.client_code     AS clientCode,
+            c.client_name     AS clientName,
+            c.status          AS clientStatus,
+
+            /* API Key 개수 */
+            COUNT(DISTINCT k.api_key_id) AS apiKeyCount,
+
+            /* 최근 5분 API 호출 수 */
+            SUM(
+                CASE
+                    WHEN u.used_at &gt;= NOW() - INTERVAL 5 MINUTE
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS apiCallsLast5Min,
+
+            /* 어제 학습 이벤트 수 */
+            IFNULL(f.event_count, 0) AS yesterdayEvents
+
+        FROM lxp_api_client c
+        LEFT JOIN lxp_api_key k
+               ON c.client_id = k.client_id
+        LEFT JOIN lxp_api_key_usage u
+               ON k.api_key_id = u.api_key_id
+        LEFT JOIN lxp_fact_event_daily f
+               ON f.client_id = c.client_id
+              AND f.stat_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+
+        GROUP BY
+            c.client_id,
+            c.client_code,
+            c.client_name,
+            c.status,
+            f.event_count
+
+        ORDER BY c.client_id
+    </select>
+
+</mapper>
