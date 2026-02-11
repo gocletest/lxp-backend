@@ -1,5 +1,6 @@
 package com.gocle.lxp.security;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,11 +27,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-
         String uri = request.getRequestURI();
-
-        return uri.startsWith("/api/auth/login")
-            || uri.startsWith("/api/xapi/");
+        return uri.startsWith("/api/auth/login") || uri.startsWith("/api/xapi/");
     }
 
     @Override
@@ -40,9 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
-        
-        System.out.println("AUTH HEADER RAW = [" + authHeader + "]");
-        
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -50,30 +46,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = authHeader.substring(7);
 
-        try {
-            String userId = jwtUtil.extractUserId(token);
-
-            if (userId != null && jwtUtil.validateToken(token)) {
-
-                UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                        userId,
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_USER"))
-                    );
-
-                authentication.setDetails(
-                    new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            }
-
-        } catch (Exception e) {
-            // 토큰 오류는 인증 실패로만 처리 (API 자체는 계속 흐르게)
-            SecurityContextHolder.clearContext();
+        if (!jwtUtil.validateToken(token)) {
+            filterChain.doFilter(request, response);
+            return;
         }
 
+        Claims claims = jwtUtil.parseClaims(token);
+
+        String userId = claims.getSubject();
+        String role = claims.get("role", String.class);
+        Long clientId = claims.get("clientId", Long.class);
+
+        CustomUserDetails userDetails =
+            new CustomUserDetails(userId, role, clientId);
+
+        UsernamePasswordAuthenticationToken authentication =
+            new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.getAuthorities()
+            );
+
+        authentication.setDetails(
+            new WebAuthenticationDetailsSource().buildDetails(request)
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
         filterChain.doFilter(request, response);
     }
 }

@@ -11,9 +11,7 @@
     <select id="selectPlatformOverview" resultType="map">
         SELECT
             /* 전체 기관 수 */
-            (SELECT COUNT(*)
-               FROM lxp_api_client
-            ) AS totalClients,
+            (SELECT COUNT(*) FROM lxp_api_client) AS totalClients,
 
             /* 활성 기관 수 */
             (SELECT COUNT(*)
@@ -22,7 +20,7 @@
             ) AS activeClients,
 
             /* 전체 사용자 수 */
-            (SELECT COUNT(DISTINCT user_id)
+            (SELECT COUNT(*)
                FROM lxp_fact_user_summary
             ) AS totalUsers,
 
@@ -31,61 +29,229 @@
                FROM lxp_course_meta
             ) AS totalCourses,
 
-            /* 어제 발생한 학습 이벤트 수 */
+            /* 어제 발생한 이벤트 수 */
             (SELECT IFNULL(SUM(event_count), 0)
                FROM lxp_fact_event_daily
               WHERE stat_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
             ) AS yesterdayEvents,
 
-            /* 현재 진행 중 학습자 수 */
+            /* 현재 학습 중 사용자 수 */
             (SELECT COUNT(*)
                FROM lxp_fact_user_summary
-              WHERE learning_status = 'IN_PROGRESS'
             ) AS learningInProgress
     </select>
 
     <!-- =====================================================
-         2. 기관별 Health 상태 테이블
-         ===================================================== -->
+         2. 기관별 Health 상태
+     ===================================================== -->
     <select id="selectClientHealth" resultType="map">
-        SELECT
-            c.client_id       AS clientId,
-            c.client_code     AS clientCode,
-            c.client_name     AS clientName,
-            c.status          AS clientStatus,
+	    SELECT
+	        c.client_id   AS clientId,
+	        c.client_code AS clientCode,
+	        c.client_name AS clientName,
+	        c.status      AS clientStatus,
+	
+	        COUNT(DISTINCT k.api_key_id) AS apiKeyCount,
+	
+	        /* 최근 5분 API 호출 수 */
+	        SUM(
+	            CASE
+	                WHEN u.used_at <![CDATA[>=]]> NOW() - INTERVAL 5 MINUTE
+	                THEN 1 ELSE 0
+	            END
+	        ) AS apiCallsLast5Min,
+	
+	        /* 오늘 이벤트 수 */
+	        IFNULL(td.event_count, 0) AS todayEvents,
+	
+	        /* 어제 이벤트 수 */
+	        IFNULL(yd.event_count, 0) AS yesterdayEvents
+	
+	    FROM lxp_api_client c
+	    LEFT JOIN lxp_api_key k
+	           ON c.client_id = k.client_id
+	    LEFT JOIN lxp_api_key_usage u
+	           ON k.api_key_id = u.api_key_id
+	
+	    /* 오늘 집계 */
+	    LEFT JOIN lxp_fact_event_daily td
+	           ON td.client_id = c.client_id
+	          AND td.stat_date = CURDATE()
+	
+	    /* 어제 집계 */
+	    LEFT JOIN lxp_fact_event_daily yd
+	           ON yd.client_id = c.client_id
+	          AND yd.stat_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+	
+	    GROUP BY
+	        c.client_id,
+	        c.client_code,
+	        c.client_name,
+	        c.status,
+	        td.event_count,
+	        yd.event_count
+	
+	    ORDER BY c.client_id
+	</select>
+	
+	<!-- =====================================================
+     3. 관리자 - 과정 상세 KPI
+     ===================================================== -->
+	<select id="selectCourseOverview" resultType="map">
 
-            /* API Key 개수 */
-            COUNT(DISTINCT k.api_key_id) AS apiKeyCount,
+	    SELECT
+	        m.external_course_id AS courseId,
+	        m.course_name        AS courseName,
+	
+	        /* 과정 학습자 수 */
+	        (
+	            SELECT COUNT(DISTINCT p.external_user_id)
+	            FROM lxp_fact_lesson_progress p
+	            WHERE p.client_id = #{clientId}
+	              AND p.external_course_id = #{courseId}
+	        ) AS learnerCount,
+	
+	        /* 과정 누적 이벤트 수 (tracking 기준) */
+	        (
+	            SELECT IFNULL(COUNT(*),0)
+	            FROM lxp_tracking_event e
+	            WHERE e.client_id = #{clientId}
+	              AND e.external_course_id = #{courseId}
+	        ) AS totalEventCount,
+	
+	        /* 평균 진도율 */
+	        (
+	            SELECT IFNULL(ROUND(AVG(p.progress_rate),2),0)
+	            FROM lxp_fact_lesson_progress p
+	            WHERE p.client_id = #{clientId}
+	              AND p.external_course_id = #{courseId}
+	        ) AS avgProgress,
+	
+	        /* 오늘 이벤트 (과정 기준) */
+	        (
+	            SELECT IFNULL(COUNT(*),0)
+	            FROM lxp_tracking_event e
+	            WHERE e.client_id = #{clientId}
+	              AND e.external_course_id = #{courseId}
+	              AND DATE(e.occurred_at) = CURDATE()
+	        ) AS todayEvents,
+	
+	        /* 어제 이벤트 (과정 기준) */
+	        (
+	            SELECT IFNULL(COUNT(*),0)
+	            FROM lxp_tracking_event e
+	            WHERE e.client_id = #{clientId}
+	              AND e.external_course_id = #{courseId}
+	              AND DATE(e.occurred_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+	        ) AS yesterdayEvents
+	
+	    FROM lxp_course_meta m
+	    WHERE m.client_id = #{clientId}
+	      AND m.external_course_id = #{courseId}
+	
+	</select>
 
-            /* 최근 5분 API 호출 수 */
-            SUM(
-                CASE
-                    WHEN u.used_at &gt;= NOW() - INTERVAL 5 MINUTE
-                    THEN 1
-                    ELSE 0
-                END
-            ) AS apiCallsLast5Min,
+	
+	<!-- =====================================================
+     4. 관리자 - 과정 최근 이벤트 로그
+     ===================================================== -->
+	<select id="selectCourseEvents" resultType="map">
 
-            /* 어제 학습 이벤트 수 */
-            IFNULL(f.event_count, 0) AS yesterdayEvents
+	    SELECT
+	        e.occurred_at        AS occurredAt,
+	        e.external_user_id   AS userId,
+	        l.user_name          AS userName,
+	        e.event_type         AS eventType,
+	        e.external_lesson_id AS lessonId,
+	        lm.lesson_name       AS lessonName
+	
+	    FROM lxp_tracking_event e
+	
+	    LEFT JOIN lxp_learner l
+	           ON l.client_id = e.client_id
+	          AND l.external_user_id = e.external_user_id
+	
+	    LEFT JOIN lxp_lesson_meta lm
+	           ON lm.client_id = e.client_id
+	          AND lm.external_lesson_id = e.external_lesson_id
+	
+	    WHERE e.client_id = #{clientId}
+	      AND e.external_course_id = #{courseId}
+	
+	    ORDER BY e.occurred_at DESC
+	
+	    LIMIT #{size}
+	
+	</select>
+	
+	<select id="selectCourseTodayEventStats" resultType="map">
+	    SELECT
+	        m.external_course_id AS courseId,
+	        m.course_name        AS courseName,
+	        IFNULL(COUNT(e.id), 0) AS todayEvents
+	    FROM lxp_course_meta m
+	    LEFT JOIN lxp_tracking_event e
+	           ON e.client_id = m.client_id
+	          AND e.external_course_id = m.external_course_id
+	          AND DATE(e.occurred_at) = CURDATE()
+	    WHERE m.client_id = #{clientId}
+	    GROUP BY m.external_course_id, m.course_name
+	    ORDER BY m.course_name
+	</select>
+	
+	<select id="selectClientEventTrend7Days" resultType="map">
+	    SELECT
+	        DATE(e.occurred_at) AS statDate,
+	        COUNT(*) AS eventCount
+	    FROM lxp_tracking_event e
+	    WHERE e.client_id = #{clientId}
+	      AND e.occurred_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+	    GROUP BY DATE(e.occurred_at)
+	    ORDER BY statDate
+	</select>
+	
+	<select id="selectTodayVsYesterday" resultType="map">
 
-        FROM lxp_api_client c
-        LEFT JOIN lxp_api_key k
-               ON c.client_id = k.client_id
-        LEFT JOIN lxp_api_key_usage u
-               ON k.api_key_id = u.api_key_id
-        LEFT JOIN lxp_fact_event_daily f
-               ON f.client_id = c.client_id
-              AND f.stat_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+	    SELECT
+	        todayCnt,
+	        yesterdayCnt,
+	        CASE
+	            WHEN yesterdayCnt = 0 THEN 0
+	            ELSE ROUND(((todayCnt - yesterdayCnt) / yesterdayCnt) * 100, 2)
+	        END AS changeRate
+	    FROM
+	    (
+	        SELECT
+	            (SELECT COUNT(*)
+	             FROM lxp_tracking_event
+	             WHERE client_id = #{clientId}
+	               AND DATE(occurred_at) = CURDATE()
+	            ) AS todayCnt,
+	
+	            (SELECT COUNT(*)
+	             FROM lxp_tracking_event
+	             WHERE client_id = #{clientId}
+	               AND DATE(occurred_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+	            ) AS yesterdayCnt
+	    ) X
 
-        GROUP BY
-            c.client_id,
-            c.client_code,
-            c.client_name,
-            c.status,
-            f.event_count
+	</select>
 
-        ORDER BY c.client_id
-    </select>
+	<select id="select7DayTrendWithAvg" resultType="map">
+	
+	    SELECT
+	        stat_date AS date,
+	        SUM(event_count) AS totalEvents
+	    FROM lxp_fact_event_daily
+	    WHERE client_id = #{clientId}
+	      AND stat_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+	    GROUP BY stat_date
+	    ORDER BY stat_date
+	
+	</select>
+
+
+
+
 
 </mapper>

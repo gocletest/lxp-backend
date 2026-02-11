@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gocle.lxp.mapper.InstitutionDashboardMapper">
+
+    <!-- =====================================================
+         1. 기관 대시보드 Overview
+         ===================================================== -->
+    <select id="selectInstitutionOverview" resultType="map">
+        SELECT
+            c.client_name AS clientName,
+
+            /* 전체 학습자 수 */
+            (SELECT COUNT(*)
+               FROM lxp_fact_user_summary u
+              WHERE u.client_id = #{clientId}
+            ) AS totalUsers,
+
+            /* 전체 과정 수 */
+            (SELECT COUNT(*)
+               FROM lxp_course_meta m
+              WHERE m.client_id = #{clientId}
+            ) AS totalCourses,
+
+            /* 오늘 이벤트 수 */
+            (SELECT IFNULL(event_count, 0)
+               FROM lxp_fact_event_daily d
+              WHERE d.client_id = #{clientId}
+                AND d.stat_date = CURDATE()
+            ) AS todayEvents,
+
+            /* 어제 이벤트 수 */
+            (SELECT IFNULL(event_count, 0)
+               FROM lxp_fact_event_daily d
+              WHERE d.client_id = #{clientId}
+                AND d.stat_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+                GROUP BY CLIENT_ID
+            ) AS yesterdayEvents
+
+        FROM lxp_api_client c
+        WHERE c.client_id = #{clientId}
+    </select>
+
+    <!-- =====================================================
+         2. 기관 과정 현황
+         ===================================================== -->
+    <select id="selectInstitutionCourses" resultType="map">
+
+	    SELECT
+	        m.external_course_id AS courseId,
+	        m.course_name        AS courseName,
+	
+	        /* 과정 학습자 수 */
+	        (
+	            SELECT COUNT(DISTINCT l.external_user_id)
+	            FROM lxp_learner l
+	            JOIN lxp_tracking_event e
+	              ON e.client_id = l.client_id
+	             AND e.external_user_id = l.external_user_id
+	            WHERE l.client_id = #{clientId}
+	              AND e.external_course_id = m.external_course_id
+	        ) AS learnerCount,
+	
+	        /* 오늘 이벤트 (과정 기준) */
+	        (
+	            SELECT IFNULL(COUNT(*),0)
+	            FROM lxp_tracking_event e
+	            WHERE e.client_id = #{clientId}
+	              AND e.external_course_id = m.external_course_id
+	              AND DATE(e.occurred_at) = CURDATE()
+	        ) AS todayEvents
+	
+	    FROM lxp_course_meta m
+	    WHERE m.client_id = #{clientId}
+	
+	    ORDER BY m.course_name
+	
+	</select>
+
+    
+    <select id="selectCourseEvents" resultType="map">
+	    SELECT
+	        event_type   AS eventType,
+	        user_id      AS user,
+	        occurred_at  AS time
+	    FROM learning_log
+	    WHERE client_id = #{clientId}
+	      AND course_id = #{courseId}
+	    ORDER BY occurred_at DESC
+	    LIMIT 20
+	</select>
+
+</mapper>

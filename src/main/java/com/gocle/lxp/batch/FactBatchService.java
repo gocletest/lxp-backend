@@ -20,8 +20,10 @@ public class FactBatchService {
     @Transactional
     public void runDailyFactBatch(Long clientId) {
 
-        String statDate = LocalDate.now().minusDays(1).toString();
-
+        //String statDate = LocalDate.now().minusDays(1).toString();
+        
+        String statDate = LocalDate.now().toString();
+        
         factMapper.upsertEventDaily(statDate, clientId);
         factMapper.upsertCourseDaily(statDate, clientId);
         factMapper.upsertUserSummary(clientId);

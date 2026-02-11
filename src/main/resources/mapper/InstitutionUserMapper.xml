@@ -160,5 +160,40 @@
         WHERE institution_user_id = #{institutionUserId}
     ]]>
     </delete>
+    
+    <!-- 기관담당자 로그인 -->
+    <select id="selectForLogin"  parameterType="map"  resultType="com.gocle.lxp.domain.InstitutionUser">
+	<![CDATA[
+	    SELECT
+	        institution_user_id,
+	        client_id,
+	        login_id,
+	        user_name,
+	        password,
+	        role,
+	        status
+	    FROM institution_user
+	    WHERE client_id = #{clientId}
+	      AND login_id = #{loginId}
+	      AND status = 'ACTIVE'
+	]]>
+	</select>
+	
+	<!-- 🔐 기관관리자 로그인 -->
+	<select id="findByLoginId"  parameterType="string" resultType="com.gocle.lxp.domain.InstitutionUser">
+	<![CDATA[
+	    SELECT
+	        institution_user_id AS institutionUserId,
+	        client_id           AS clientId,
+	        login_id            AS loginId,
+	        user_name           AS userName,
+	        password,
+	        role,
+	        status
+	    FROM institution_user
+	    WHERE login_id = #{loginId}
+	      AND status = 'ACTIVE'
+	]]>
+	</select>
 
 </mapper>

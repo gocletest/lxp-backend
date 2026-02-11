@@ -1,5 +1,6 @@
 package com.gocle.lxp.service;
 
+import com.gocle.lxp.domain.InstitutionUser;
 import com.gocle.lxp.dto.institution.InstitutionUserDto;
 import com.gocle.lxp.mapper.InstitutionUserMapper;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -122,6 +124,30 @@ public class InstitutionUserService {
     /** 삭제 */
     public void deleteInstitutionUser(Long institutionUserId) {
         institutionUserMapper.deleteById(institutionUserId);
+    }
+    
+    public InstitutionUser validateInstitutionUser(
+            Long clientId,
+            String loginId,
+            String rawPassword
+    ) {
+        InstitutionUser user =
+            institutionUserMapper.selectForLogin(
+                Map.of(
+                    "clientId", clientId,
+                    "loginId", loginId
+                )
+            );
+
+        if (user == null) {
+            return null;
+        }
+
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+            return null;
+        }
+
+        return user;
     }
 }
 

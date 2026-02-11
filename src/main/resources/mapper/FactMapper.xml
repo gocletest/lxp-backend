@@ -8,25 +8,28 @@
     <!-- =========================
          EVENT DAILY
          ========================= -->
-    <insert id="upsertEventDaily">
-        INSERT INTO lxp_fact_event_daily (
-            stat_date,
-            client_id,
-            event_type,
-            event_count
-        )
-        SELECT
-            DATE(occurred_at),
-            client_id,
-            event_type,
-            COUNT(*)
-        FROM lxp_tracking_event
-        WHERE DATE(occurred_at) = #{statDate}
-          AND client_id = #{clientId}
-        GROUP BY event_type
-        ON DUPLICATE KEY UPDATE
-            event_count = VALUES(event_count)
-    </insert>
+	<insert id="upsertEventDaily">
+	    INSERT INTO lxp_fact_event_daily (
+	        stat_date,
+	        client_id,
+	        event_type,
+	        event_count
+	    )
+	    SELECT
+	        DATE(occurred_at),
+	        client_id,
+	        event_type,
+	        COUNT(*)
+	    FROM lxp_tracking_event
+	    WHERE DATE(occurred_at) = #{statDate}
+	      AND client_id = #{clientId}
+	    GROUP BY DATE(occurred_at), client_id, event_type
+	    ON DUPLICATE KEY UPDATE
+	        event_count = VALUES(event_count)  
+	</insert>
+
+
+
 
     <!-- =========================
          COURSE DAILY

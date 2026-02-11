@@ -1,13 +1,17 @@
 package com.gocle.lxp.mapper;
 
+import com.gocle.lxp.domain.InstitutionUser;
 import com.gocle.lxp.dto.institution.InstitutionUserDto;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface InstitutionUserMapper {
+	
+	InstitutionUser selectForLogin(Map<String, Object> params);
 
     List<InstitutionUserDto> selectInstitutionUsers(
         @Param("clientId") Long clientId,
@@ -44,6 +48,10 @@ public interface InstitutionUserMapper {
     int deleteById(
         @Param("institutionUserId") Long institutionUserId
     );
+    
+    InstitutionUser findByLoginId(
+            @Param("loginId") String loginId
+        );
 }
 
 
