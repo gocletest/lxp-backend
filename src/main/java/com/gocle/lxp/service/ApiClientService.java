@@ -37,4 +37,8 @@ public class ApiClientService {
     public ApiClientResponse getClient(Long clientId) {
         return mapper.selectClientById(clientId);
     }
+    
+    public List<Long> selectActiveClientIds() {
+        return mapper.selectActiveClientIds();
+    }
 }

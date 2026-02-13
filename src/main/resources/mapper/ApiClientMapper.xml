@@ -88,5 +88,13 @@
 	    WHERE client_id = #{clientId}
 	]]>
 	</select>
+	
+	<select id="selectActiveClientIds" resultType="long">
+	<![CDATA[
+	    SELECT client_id
+	    FROM lxp_api_client
+	    WHERE status = 'ACTIVE'
+	]]>
+	</select>
 
 </mapper>

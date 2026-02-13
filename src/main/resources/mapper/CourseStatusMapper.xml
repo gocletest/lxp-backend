@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gocle.lxp.mapper.CourseStatusMapper">
+
+    <!-- =========================
+         기관 KPI (특정 client)
+    ========================== -->
+    <select id="selectOverview"
+            resultType="com.gocle.lxp.dto.analytics.CourseOverviewResponse">
+
+        SELECT
+            COUNT(DISTINCT cm.course_meta_id) AS totalCourses,
+            COUNT(DISTINCT cm.course_meta_id) AS activeCourses,
+            0 AS avgProgress,
+            IFNULL(SUM(fd.active_user_count),0) AS todayLearners
+        FROM lxp_course_meta cm
+        LEFT OUTER JOIN lxp_fact_course_daily fd
+            ON cm.external_course_id = fd.external_course_id
+            AND cm.client_id = fd.client_id
+        WHERE cm.client_id = #{clientId}
+
+    </select>
+
+
+    <!-- =========================
+         전체 KPI (ADMIN용)
+    ========================== -->
+    <select id="selectOverviewAll"
+            resultType="com.gocle.lxp.dto.analytics.CourseOverviewResponse">
+
+        SELECT
+            COUNT(DISTINCT cm.course_meta_id) AS totalCourses,
+            COUNT(DISTINCT cm.course_meta_id) AS activeCourses,
+            0 AS avgProgress,
+            IFNULL(SUM(fd.active_user_count),0) AS todayLearners
+        FROM lxp_course_meta cm
+        LEFT OUTER JOIN lxp_fact_course_daily fd
+            ON cm.external_course_id = fd.external_course_id
+            AND cm.client_id = fd.client_id
+
+    </select>
+
+
+    <!-- =========================
+         기관 과정 리스트
+    ========================== -->
+    <select id="selectCourseList"  resultType="com.gocle.lxp.dto.analytics.CourseStatusResponse">
+
+	    SELECT
+	        cm.course_meta_id AS id,
+	        cm.course_name AS courseName,
+	
+	        -- 누적 학습자 수
+	        IFNULL((
+	            SELECT SUM(fd1.active_user_count)
+	            FROM lxp_fact_course_daily fd1
+	            WHERE fd1.client_id = cm.client_id
+	              AND fd1.external_course_id = cm.external_course_id
+	        ),0) AS totalLearnerCount,
+	
+	        -- 오늘 학습자 수
+	        IFNULL((
+	            SELECT SUM(fd2.active_user_count)
+	            FROM lxp_fact_course_daily fd2
+	            WHERE fd2.client_id = cm.client_id
+	              AND fd2.external_course_id = cm.external_course_id
+	              AND fd2.stat_date = CURDATE()
+	        ),0) AS todayLearnerCount,
+	
+	        0 AS avgProgress,
+	        cm.created_at AS startDate,
+	        cm.updated_at AS endDate
+	
+	    FROM lxp_course_meta cm
+	    WHERE cm.client_id = #{clientId}
+	    ORDER BY cm.created_at DESC
+	
+	</select>
+
+
+
+    <!-- =========================
+         전체 과정 리스트 (ADMIN용)
+    ========================== -->
+    <select id="selectCourseListAll"
+            resultType="com.gocle.lxp.dto.analytics.CourseStatusResponse">
+
+        SELECT
+            cm.course_meta_id AS id,
+            cm.course_name AS courseName,
+            IFNULL(SUM(fd.active_user_count),0) AS totalLearnerCount,
+            IFNULL(SUM(fd.started_count),0) AS todayLearnerCount,
+            0 AS avgProgress,
+            cm.created_at AS startDate,
+            cm.updated_at AS endDate
+        FROM lxp_course_meta cm
+        LEFT OUTER JOIN lxp_fact_course_daily fd
+            ON cm.external_course_id = fd.external_course_id
+            AND cm.client_id = fd.client_id
+        GROUP BY cm.course_meta_id, cm.course_name, cm.created_at, cm.updated_at
+        ORDER BY cm.created_at DESC
+
+    </select>
+    
+    <!-- =========================
+     과정 상세 KPI
+	========================== -->
+	<select id="selectCourseDetail"
+	        resultType="com.gocle.lxp.dto.analytics.CourseDetailResponse">
+	
+	    SELECT
+	        cm.course_name AS courseName,
+	        IFNULL(SUM(fd.active_user_count),0) AS totalLearners,
+	        IFNULL(SUM(fd.completed_count),0) AS completedCount,
+	        IFNULL(SUM(CASE WHEN fd.stat_date = CURDATE()
+	                        THEN fd.active_user_count ELSE 0 END),0) AS todayActiveUsers
+	    FROM lxp_course_meta cm
+	    LEFT OUTER JOIN lxp_fact_course_daily fd
+	        ON cm.external_course_id = fd.external_course_id
+	        AND cm.client_id = fd.client_id
+	    WHERE cm.course_meta_id = #{courseId}
+	    GROUP BY cm.course_name
+	
+	</select>
+
+
+</mapper>

@@ -2,8 +2,13 @@ package com.gocle.lxp.batch;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import com.gocle.lxp.service.ApiClientService;
 
 @Component
 @RequiredArgsConstructor
@@ -11,6 +16,7 @@ import org.springframework.stereotype.Component;
 public class FactBatchScheduler {
 
     private final FactBatchService factBatchService;
+    private final ApiClientService apiClientService;
 
     /**
      * FACT 배치
@@ -29,12 +35,19 @@ public class FactBatchScheduler {
         log.info("[FACT-Scheduler] Daily FACT batch started");
 
         try {
-            // 우선 단일 client
-            Long clientId = 3L;
-            factBatchService.runDailyFactBatch(clientId);
+            List<Long> clientIds = apiClientService.selectActiveClientIds();
+
+            for (Long clientId : clientIds) {
+                try {
+                	log.info("[FACT-Scheduler] Running batch for clientId={}", clientId);
+                    factBatchService.runDailyFactBatch(clientId);
+                } catch (Exception e) {
+                    log.error("Client {} batch failed", clientId, e);
+                }
+            }
 
         } catch (Exception e) {
-            log.error("[FACT-Scheduler] Daily FACT batch failed", e);
+            log.error("[FACT-Scheduler] FACT batch failed", e);
         }
 
         log.info("[FACT-Scheduler] Daily FACT batch finished");

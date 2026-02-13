@@ -21,7 +21,7 @@ public class MonitoringService {
     private String index;
 
     /* ===================================================
-       🔥 진입부
+       🔥 진입부 (관리자 / 기관 공통)
        =================================================== */
 
     public Map<String, Object> getRealtimeData(Long clientId) throws Exception {
@@ -53,7 +53,7 @@ public class MonitoringService {
     }
 
     /* ===================================================
-       1️⃣ 오늘 총 이벤트 (KST)
+       1️⃣ 오늘 총 이벤트 (한국시간 기준)
        =================================================== */
 
     private long getTodayTotal(Long clientId) throws Exception {
@@ -72,8 +72,7 @@ public class MonitoringService {
                   "range": {
                     "occurred_at": {
                       "gte": "now/d",
-                      "lte": "now",
-                      "time_zone": "+09:00"
+                      "time_zone": "Asia/Seoul"
                     }
                   }
                 }
@@ -87,7 +86,7 @@ public class MonitoringService {
     }
 
     /* ===================================================
-       2️⃣ 현재 TPS (최근 30초)
+       2️⃣ 현재 TPS (최근 30초 기준)
        =================================================== */
 
     private double getCurrentTps(Long clientId) throws Exception {
@@ -120,7 +119,7 @@ public class MonitoringService {
     }
 
     /* ===================================================
-       3️⃣ 최근 5분 TPS 추이
+       3️⃣ 최근 5분 추이 (한국시간 고정)
        =================================================== */
 
     private List<Map<String, Object>> getTrend5m(Long clientId) throws Exception {
@@ -149,7 +148,7 @@ public class MonitoringService {
               "date_histogram": {
                 "field": "occurred_at",
                 "fixed_interval": "10s",
-                "time_zone": "+09:00",
+                "time_zone": "Asia/Seoul",
                 "min_doc_count": 0
               }
             }
@@ -226,9 +225,13 @@ public class MonitoringService {
        =================================================== */
 
     private String buildClientFilter(Long clientId) {
-        if (clientId == null) return "";
+
+        if (clientId == null) {
+            return "";
+        }
+
         return """
-        { "term": { "client_id": %d }},
+            { "term": { "client_id": %d } },
         """.formatted(clientId);
     }
 

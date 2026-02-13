@@ -33,4 +33,6 @@ public interface ApiClientMapper {
     );
     
     ApiClientResponse selectClientById(Long clientId);
+    
+    List<Long> selectActiveClientIds();
 }
